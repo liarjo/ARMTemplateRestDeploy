@@ -1,4 +1,4 @@
-# ARMTemplateRestDepoy
+# ARM Template REST API Depoyment using C#
 c# Sample code to deploy ARM Template using REST API
 
 This simple use REST API to create a deployment base on a ARM template.

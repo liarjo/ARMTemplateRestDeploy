@@ -1,0 +1,32 @@
+﻿{
+  "properties": {
+    "templateLink": {
+      "uri": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/101-vm-customdata/azuredeploy.json",
+      "contentVersion": "1.0.0.0"
+    },
+    "mode": "Incremental",
+    "parameters": {
+      "adminUsername": {
+        "value": "admin123"
+      },
+      "adminPassword": {
+        "value": ""
+      },
+      "customData": {
+        "value": "echo customData"
+      },
+      "dnsLabelPrefix": {
+        "value": ""
+      },
+      "vmSize": {
+        "value": "Standard_D2"
+      },
+      "ubuntuOSVersion": {
+        "value": "14.04.2-LTS"
+      }
+    },
+    "debugSetting": {
+      "detailLevel": "requestContent, responseContent"
+    }
+  }
+}

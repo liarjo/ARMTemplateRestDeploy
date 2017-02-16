@@ -1,7 +1,7 @@
 # ARM Template REST API Depoyment using CSharp
 c# Sample code to deploy ARM Template using REST API
 
-This simple use REST API to create a deployment base on a ARM template.
+This sample use REST API to create a deployment base on a ARM template.
 To use the sample you need to add this parameters to the APP.CONFIG file
 
 1.	Client ID

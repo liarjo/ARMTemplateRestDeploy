@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using AzureRestHelper;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -21,6 +22,7 @@ namespace ConsoleRestDeploy
         static string _client_secret;
         static string _myToken;
         static string _resource_group_name;
+        static ARMRestHelper myTokenManager;
         /// <summary>
         /// Setup application configuration
         /// </summary>
@@ -33,48 +35,9 @@ namespace ConsoleRestDeploy
             _client_secret = ConfigurationManager.AppSettings["_client_secret"];
             _resource_group_name = ConfigurationManager.AppSettings["_resource_group_name"];
             _subscription_id = ConfigurationManager.AppSettings["_subscription_id"];
-
+            myTokenManager = new AzureRestHelper.ARMRestHelper();
         }
-        /// <summary>
-        /// Create Token to access to Managment API
-        /// </summary>
-        /// <param name="tenant_id">Tenant ID</param>
-        /// <param name="client_id">Client ID</param>
-        /// <param name="client_secret">Client Secret</param>
-        /// <param name="callback">Callback to set Token value</param>
-        static async void GetToken(string tenant_id, string client_id, string client_secret,Action<string> callback)
-        {
 
-            string myToken=null;
-
-            var content = new FormUrlEncodedContent(new KeyValuePair<string, string>[]{
-                new KeyValuePair<string, string>("resource", _managementUrl),
-                new KeyValuePair<string, string>("grant_type", "client_credentials"),
-                new KeyValuePair<string, string>("client_id", client_id),
-                new KeyValuePair<string, string>("client_secret",client_secret) });
-            using (var client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var response = client.PostAsync(_loginUrl + tenant_id + "/oauth2/token", content).Result;
-                string stringR = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(stringR);
-                JObject jsonR = JObject.Parse(stringR);
-                myToken = jsonR.SelectToken("access_token").ToString();
-            }
-
-            if (callback != null)
-                callback(myToken);
-        }
-        /// <summary>
-        /// Set Token Value
-        /// </summary>
-        /// <param name="myToken"></param>
-        static void SetToken(string myToken)
-        {
-            _myToken = myToken;
-            Console.WriteLine();
-            Console.WriteLine("Token: {0}" + _myToken);
-        }
         /// <summary>
         /// Update parameter values on json deploy BODY
         /// </summary>
@@ -191,7 +154,7 @@ namespace ConsoleRestDeploy
            
             string command = string.Format(manageURL, subscriptionId, resourceGroupName);
             string Response="";
-            ExecuteHttpPost(command, myContent, delegate (string s) { Response = s;  });
+            ExecuteHttpPost(command, myContent, delegate (string s) { Response = s;  });    
             Console.WriteLine();
             Console.WriteLine(Response);
             
@@ -200,9 +163,9 @@ namespace ConsoleRestDeploy
         static void Main(string[] args)
         {
             setup();
+            var myTokenManager = new AzureRestHelper.ARMRestHelper();
 
-            GetToken(_tenant_id, _client_id, _client_secret, myToken => SetToken(myToken));
-            
+            _myToken= myTokenManager.GetToken(_tenant_id, _client_id, _client_secret, _managementUrl, _loginUrl).Result;
             //Reasource Group Name
             if (string.IsNullOrEmpty(_resource_group_name))
                 _resource_group_name = string.Format("ARMD-{0}", DateTime.Now.Ticks.ToString());

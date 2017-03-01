@@ -1,4 +1,5 @@
 ﻿using AzureRestHelper;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -66,26 +67,6 @@ namespace ConsoleRestDeploy
             return X.ToString();
         }
         /// <summary>
-        /// Execute HTTP POST REST API CALL
-        /// </summary>
-        /// <param name="command">URL PATH</param>
-        /// <param name="myContent">content</param>
-        /// <param name="CallBack">callbacjk to write response</param>
-        static async void ExecuteHttpPost(string command, HttpContent myContent, Action<string> CallBack)
-        {
-            using (var client = new HttpClient())
-            {
-                //Common headers
-                client.BaseAddress = new Uri(_managementUrl);
-                client.DefaultRequestHeaders.Add("Authorization", "Bearer  " + _myToken);
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var response = client.PutAsync(command, myContent).Result;
-                string stringR = await response.Content.ReadAsStringAsync();
-                if (CallBack != null)
-                    CallBack(stringR);
-            }
-        }
-        /// <summary>
         /// Deploy Template
         /// </summary>
         /// <param name="subscriptionId">Sub ID</param>
@@ -97,44 +78,18 @@ namespace ConsoleRestDeploy
             string manageURL = "/subscriptions/{0}/resourcegroups/{1}/providers/Microsoft.Resources/deployments/{2}?api-version=2016-09-01";
             var myContent = new StringContent(jsonBody, Encoding.UTF8, "application/json");
             string command = string.Format(manageURL, subscriptionId, resourceGroupName, deploymentName);
-
-            ExecuteHttpPost(command, myContent, printDeployResponse);
-
-
+            var jsonResponse=myTokenManager.ExecuteHttpPost(command, myContent, _managementUrl, _myToken).Result;
+            printDeployResponse(jsonResponse);
         }
         /// <summary>
-        /// Parse JSON data and print on the 
+        /// Print on Console JSON data Indented
         /// </summary>
         /// <param name="jContent">json data</param>
         static void printDeployResponse(string jContent)
         {
             var rootToken = JToken.Parse(jContent);
-            if (rootToken is JObject)
-            {
-                JObject oContent = JObject.Parse(jContent);
-                Console.WriteLine("--------------------------------------------");
-                foreach (var item in oContent)
-                {
-                    if (!oContent[item.Key].Any())
-                        Console.WriteLine("{0} = {1}", item.Key, item.Value);
-                    else
-                    {
-                        Console.WriteLine("{0}", item.Key);
-                        printDeployResponse(oContent[item.Key].ToString());
-                    }
-                }
-            }
-            else
-            {
-                JArray aContent = JArray.Parse(jContent);
-                foreach (JToken arrayElement in aContent)
-                {
-                    if (arrayElement.Any())
-                        printDeployResponse(Newtonsoft.Json.JsonConvert.SerializeObject(arrayElement));
-                    else
-                        Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(arrayElement));
-                }
-            }
+            string xx = JsonConvert.SerializeObject(rootToken, Formatting.Indented);
+            Console.WriteLine(xx);
         }
         /// <summary>
         /// Create or Update a resource group on specific region
@@ -150,16 +105,39 @@ namespace ConsoleRestDeploy
                                     "{\"location\":\"West US\",\"tags\":{\"provider\":\"" + myUniqTag + "\"}}",
                                     Encoding.UTF8,
                                     "application/json");
-
-           
             string command = string.Format(manageURL, subscriptionId, resourceGroupName);
-            string Response="";
-            ExecuteHttpPost(command, myContent, delegate (string s) { Response = s;  });    
+            string Response = myTokenManager.ExecuteHttpPost(command, myContent, _managementUrl, _myToken).Result;
             Console.WriteLine();
             Console.WriteLine(Response);
-            
         }
-       
+
+        /// <summary>
+        /// Wait until deploy change to status Succeded 
+        /// </summary>
+        /// <param name="RGName">Resource Group Name</param>
+        /// <param name="DeployName">Deployment Name</param>
+        static void waitDeploy(string RGName, string DeployName)
+        {
+            string command = String.Format(
+                "subscriptions/{0}/resourcegroups/{1}/providers/Microsoft.Resources/deployments/{2}?api-version=2016-09-01",
+                _subscription_id,
+                RGName,
+                DeployName
+                );
+
+            string provisioningState = "";
+            while (provisioningState!= "Succeeded")
+            {
+                var rString = myTokenManager.ExecuteGet(command, _managementUrl, _myToken).Result;
+                JObject myResponse = JObject.Parse(rString);
+                provisioningState = myResponse.SelectToken("properties").SelectToken("provisioningState").ToString();
+
+                Console.WriteLine("{1} provisioningState: {0}", provisioningState, RGName);
+
+                System.Threading.Thread.Sleep(5 * 1000);
+            }
+            Console.WriteLine("");
+        }
         static void Main(string[] args)
         {
             setup();
@@ -182,9 +160,15 @@ namespace ConsoleRestDeploy
             
             //Update json Body rest call
             string jUpdatedBody = UpdateParameters(parametersCollection, jBody);
-            
+
             //Deploy template
-            DeployTemplate(_subscription_id, _resource_group_name, "depploy-" + DateTime.Now.Second.ToString(), jUpdatedBody);
+            string deployName = "depploy-" + DateTime.Now.Second.ToString();
+            DeployTemplate(_subscription_id, _resource_group_name, deployName, jUpdatedBody);
+
+            //Wait for dpeloyment
+            waitDeploy(_resource_group_name, deployName);
+
+            Console.WriteLine("Enter to close");
             Console.ReadLine();
         }
     }

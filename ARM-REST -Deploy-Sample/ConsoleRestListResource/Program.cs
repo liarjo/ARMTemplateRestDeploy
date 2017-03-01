@@ -2,11 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConsoleRestListResource
 {
@@ -58,11 +54,11 @@ namespace ConsoleRestListResource
                     //List Public IP on RG ARMD-636238979770432643
                     "subscriptions/{0}/resourceGroups/ARMD-636238979770432643/providers/Microsoft.Network/publicIPAddresses?api-version=2016-09-01"
                 };
-
+            //Read configuration 
             setup();
-
+            //Get token 
             _myToken = myTokenManager.GetToken(_tenant_id, _client_id, _client_secret, _managementUrl, _loginUrl).Result;
-
+            //listing resources and Print
             foreach (string myCommand in myCommands)
             {
                 string currentCommand = string.Format(myCommand, _subscription_id);

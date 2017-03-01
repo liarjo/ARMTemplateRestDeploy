@@ -22,9 +22,7 @@ namespace AzureRestHelper
         /// <returns></returns>
         public async Task<string> GetToken(string tenant_id, string client_id, string client_secret, string managementUrl, string loginUrl)
         {
-
             string myToken = null;
-
             var content = new FormUrlEncodedContent(new KeyValuePair<string, string>[]{
                 new KeyValuePair<string, string>("resource", managementUrl),
                 new KeyValuePair<string, string>("grant_type", "client_credentials"),
@@ -39,7 +37,6 @@ namespace AzureRestHelper
                 JObject jsonR = JObject.Parse(stringR);
                 myToken = jsonR.SelectToken("access_token").ToString();
             }
-
             return myToken;
         }
 
@@ -63,10 +60,16 @@ namespace AzureRestHelper
                 stringR = await response.Content.ReadAsStringAsync();
             }
             return stringR;
-        }
-
-         
-        static async Task<string> ExecuteHttpPost(string command, HttpContent myContent, string managementUrl, string myToken)
+        } 
+        /// <summary>
+        /// Execute HTTP POST 
+        /// </summary>
+        /// <param name="command">path call</param>
+        /// <param name="myContent">body content</param>
+        /// <param name="managementUrl">API URL</param>
+        /// <param name="myToken">Bearer Token</param>
+        /// <returns></returns>
+        public async Task<string> ExecuteHttpPost(string command, HttpContent myContent, string managementUrl, string myToken)
         {
             string stringR = null;
             using (var client = new HttpClient())
@@ -77,7 +80,6 @@ namespace AzureRestHelper
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 var response = client.PutAsync(command, myContent).Result;
                 stringR = await response.Content.ReadAsStringAsync();
-               
             }
             return stringR;
         }
